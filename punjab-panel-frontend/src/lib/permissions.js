@@ -1,0 +1,160 @@
+export const PERMISSIONS = Object.freeze({
+  DASHBOARD: "dashboard",
+  MY_CONTENT: "my_content",
+  CREATE_ARTICLE: "create_article",
+  CREATE_BLOG: "create_blog",
+  CREATE_VIDEO: "create_video",
+  REVIEW_CONTENT: "review_content",
+  CONTENT_HISTORY: "content_history",
+  VIEW_TOP_CONTENT: "view_top_content",
+  VIEW_AUDIENCE_ANALYTICS: "view_audience_analytics",
+  TEAM_MEMBERS: "team_members",
+  MANAGE_USERS: "manage_users",
+  MANAGE_WEBSITES: "manage_websites",
+  MANAGE_POLICIES: "manage_policies",
+  MANAGE_COMMENTS: "manage_comments",
+  MANAGE_DELETED_ITEMS: "manage_deleted_items",
+  MANAGE_POSTING_LIMITS: "manage_posting_limits",
+  MANAGE_SITE_MANAGEMENT: "manage_site_management",
+  MANAGE_CATEGORIES: "manage_categories",
+  MANAGE_CAREERS: "manage_careers",
+  MANAGE_WALLETS: "manage_wallets",
+  MANAGE_WITHDRAWALS: "manage_withdrawals",
+  MANAGE_POINT_RATES: "manage_point_rates",
+  MANAGE_SITE_DATA: "manage_site_data",
+  MANAGE_SERVICES: "manage_services",
+  MANAGE_ADS: "manage_ads",
+  SITE_POLITICIANS: "site_politicians",
+  SITE_PARTIES: "site_parties",
+  SITE_STATES: "site_states",
+  SITE_DISTRICTS: "site_districts",
+  SITE_PARLIAMENT: "site_parliament",
+  SITE_SCHEDULES: "site_schedules",
+  SITE_VIDHAN_SABHAS: "site_vidhan_sabhas",
+  SITE_HOME_WIDGETS: "site_home_widgets",
+  SITE_WIDGET_BREAKING_NEWS: "site_widget_breaking_news",
+  SITE_WIDGET_POLL: "site_widget_poll",
+  SITE_WIDGET_ELECTION_RESULTS: "site_widget_election_results",
+  SITE_WIDGET_OTHER: "site_widget_other",
+  SITE_PAGE_PROFILES: "site_page_profiles",
+  TASK_MANAGEMENT: "task_management",
+  MANAGE_TASK_MANAGEMENT: "manage_task_management",
+  VIEW_TASKS: "view_tasks",
+  CREATE_TASKS: "create_tasks",
+  EDIT_TASKS: "edit_tasks",
+  DELETE_TASKS: "delete_tasks",
+  ASSIGN_TASKS: "assign_tasks",
+  UPDATE_TASK_STATUS: "update_task_status",
+});
+
+export const PERMISSION_GROUPS = [
+  {
+    label: "Content",
+    permissions: [
+      [PERMISSIONS.DASHBOARD, "Dashboard"],
+      [PERMISSIONS.MY_CONTENT, "My Content"],
+      [PERMISSIONS.CREATE_ARTICLE, "Create articles"],
+      [PERMISSIONS.CREATE_BLOG, "Create blogs"],
+      [PERMISSIONS.CREATE_VIDEO, "Create videos"],
+      [PERMISSIONS.REVIEW_CONTENT, "Approve or reject content"],
+      [PERMISSIONS.CONTENT_HISTORY, "Content history"],
+      [PERMISSIONS.VIEW_TOP_CONTENT, "Top content (most-viewed articles and blogs)"],
+      [PERMISSIONS.VIEW_AUDIENCE_ANALYTICS, "Audience analytics (active users, streaks and retention)"],
+    ],
+  },
+  {
+    label: "Administration",
+    permissions: [
+      [PERMISSIONS.TEAM_MEMBERS, "Create and manage team members"],
+      [PERMISSIONS.MANAGE_USERS, "View and delete normal users"],
+      [PERMISSIONS.MANAGE_WEBSITES, "Manage website settings"],
+      [PERMISSIONS.MANAGE_POLICIES, "Manage policies"],
+      [PERMISSIONS.MANAGE_COMMENTS, "Moderate comments"],
+      [PERMISSIONS.MANAGE_DELETED_ITEMS, "Restore or permanently delete items"],
+      [PERMISSIONS.MANAGE_POSTING_LIMITS, "Manage posting limits"],
+      [PERMISSIONS.MANAGE_SITE_MANAGEMENT, "Manage homepage and navigation"],
+      [PERMISSIONS.MANAGE_CATEGORIES, "Manage categories"],
+      [PERMISSIONS.MANAGE_CAREERS, "Jobs and career applications"],
+      [PERMISSIONS.MANAGE_SITE_DATA, "Open Site Data"],
+    ],
+  },
+  {
+    label: "Task management",
+    permissions: [
+      [PERMISSIONS.MANAGE_TASK_MANAGEMENT, "Full task management (every privilege below)"],
+      [PERMISSIONS.VIEW_TASKS, "View tasks"],
+      [PERMISSIONS.CREATE_TASKS, "Create tasks"],
+      [PERMISSIONS.EDIT_TASKS, "Edit task details"],
+      [PERMISSIONS.ASSIGN_TASKS, "Assign tasks to other team members"],
+      [PERMISSIONS.UPDATE_TASK_STATUS, "Change task status only"],
+      [PERMISSIONS.DELETE_TASKS, "Delete tasks"],
+    ],
+  },
+  {
+    label: "Services",
+    permissions: [
+      [PERMISSIONS.MANAGE_SERVICES, "Create, edit, publish and delete services"],
+    ],
+  },
+  {
+    label: "Advertising",
+    permissions: [
+      [PERMISSIONS.MANAGE_ADS, "Create, schedule and remove advertisements"],
+    ],
+  },
+  {
+    label: "Wallet & Points",
+    permissions: [
+      [PERMISSIONS.MANAGE_WALLETS, "Enable or block withdrawals"],
+      [PERMISSIONS.MANAGE_WITHDRAWALS, "Review withdrawal requests, mark paid with UTR or reject"],
+      [PERMISSIONS.MANAGE_POINT_RATES, "Set content rewards and point values"],
+    ],
+  },
+  {
+    label: "Site Data",
+    permissions: [
+      [PERMISSIONS.SITE_POLITICIANS, "Politicians"],
+      [PERMISSIONS.SITE_PARTIES, "Political parties"],
+      [PERMISSIONS.SITE_STATES, "States and territories"],
+      [PERMISSIONS.SITE_DISTRICTS, "Districts"],
+      [PERMISSIONS.SITE_PARLIAMENT, "Lok Sabha and Rajya Sabha"],
+      [PERMISSIONS.SITE_SCHEDULES, "Events and upcoming rallies"],
+      [PERMISSIONS.SITE_VIDHAN_SABHAS, "Vidhan Sabhas"],
+      [PERMISSIONS.SITE_HOME_WIDGETS, "All home widgets"],
+      [PERMISSIONS.SITE_WIDGET_BREAKING_NEWS, "Breaking news widget"],
+      [PERMISSIONS.SITE_WIDGET_POLL, "Poll of the day"],
+      [PERMISSIONS.SITE_WIDGET_ELECTION_RESULTS, "Election results widget"],
+      [PERMISSIONS.SITE_WIDGET_OTHER, "Other home widgets"],
+      [PERMISSIONS.SITE_PAGE_PROFILES, "Rallies, speeches and election page profiles"],
+    ],
+  },
+];
+
+export const ROLE_DEFAULT_PERMISSIONS = {
+  AUTHOR: [PERMISSIONS.DASHBOARD, PERMISSIONS.MY_CONTENT, PERMISSIONS.CREATE_ARTICLE, PERMISSIONS.CREATE_BLOG, PERMISSIONS.CREATE_VIDEO, PERMISSIONS.VIEW_TASKS, PERMISSIONS.UPDATE_TASK_STATUS],
+  EDITOR: [PERMISSIONS.DASHBOARD, PERMISSIONS.MY_CONTENT, PERMISSIONS.CREATE_ARTICLE, PERMISSIONS.CREATE_BLOG, PERMISSIONS.CREATE_VIDEO, PERMISSIONS.REVIEW_CONTENT, PERMISSIONS.CONTENT_HISTORY, PERMISSIONS.VIEW_TASKS, PERMISSIONS.UPDATE_TASK_STATUS],
+  INVESTOR: [PERMISSIONS.DASHBOARD, PERMISSIONS.VIEW_TOP_CONTENT, PERMISSIONS.VIEW_AUDIENCE_ANALYTICS],
+  SUBADMIN: [
+    PERMISSIONS.DASHBOARD,
+    PERMISSIONS.REVIEW_CONTENT,
+    PERMISSIONS.CONTENT_HISTORY,
+    PERMISSIONS.TEAM_MEMBERS,
+    PERMISSIONS.MANAGE_SITE_MANAGEMENT,
+    PERMISSIONS.MANAGE_WALLETS,
+    PERMISSIONS.MANAGE_WITHDRAWALS,
+    PERMISSIONS.MANAGE_POINT_RATES,
+    PERMISSIONS.MANAGE_SITE_DATA,
+    PERMISSIONS.MANAGE_SERVICES,
+    PERMISSIONS.MANAGE_ADS,
+    PERMISSIONS.MANAGE_TASK_MANAGEMENT,
+    ...PERMISSION_GROUPS.find((group) => group.label === "Site Data").permissions.map(([permission]) => permission),
+  ],
+};
+
+export function hasPermission(user, permission) {
+  return user?.role === "ADMIN" || user?.permissions?.includes(permission);
+}
+
+export function hasAnyPermission(user, permissions = []) {
+  return user?.role === "ADMIN" || permissions.some((permission) => user?.permissions?.includes(permission));
+}

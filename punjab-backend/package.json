@@ -1,0 +1,48 @@
+{
+  "name": "punjab-backend",
+  "version": "1.0.0",
+  "description": "Dedicated API for Punjab Politics",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "seed:widgets": "node scripts/seedNews.js",
+    "seed:reference": "node scripts/seedReferenceData.js",
+    "seed:geography": "node scripts/seedGeography.js",
+    "seed:politicians": "node scripts/seedPoliticians.js",
+    "seed:content": "node scripts/seedContent.js",
+    "seed:categories": "node scripts/seedCategories.js",
+    "seed:database": "npm run seed:widgets && npm run seed:reference && npm run seed:geography && npm run seed:politicians && npm run seed:categories"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.8.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "firebase-admin": "^14.2.0",
+    "google-auth-library": "^11.0.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.9.2",
+    "multer": "^2.2.0",
+    "mysql2": "^3.23.3",
+    "next-intl": "^4.13.7",
+    "nodemailer": "^9.0.5",
+    "openai": "^7.4.0",
+    "pg": "^8.23.0",
+    "sanitize-html": "^2.17.7",
+    "sharp": "^0.35.3",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
