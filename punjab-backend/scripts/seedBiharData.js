@@ -175,7 +175,7 @@ const widgets = {
       { label: "Bihar News", href: "/top-news", enabled: true },
       { label: "Bihar Government", href: "/category/bihar-government", enabled: true },
       { label: "Bihar Elections", href: "/elections", enabled: true },
-      { label: "Bihar Leaders", href: "/key-political-figures", enabled: true, feature: "feature_leaders" },
+      { label: "Politicians", href: "/politicians", enabled: true, feature: "feature_leaders" },
       { label: "Bihar Parties", href: "/parties", enabled: true, feature: "feature_parties" },
       { label: "Bihar State", href: "/state", enabled: true, feature: "feature_states" },
       { label: "Blogs", href: "/blogs", enabled: true, feature: "feature_blogs" },
@@ -200,7 +200,7 @@ const widgets = {
         links: [
           { label: "Bihar News", href: "/top-news" },
           { label: "Bihar Elections", href: "/elections" },
-          { label: "Bihar Leaders", href: "/key-political-figures", feature: "feature_leaders" },
+          { label: "Politicians", href: "/politicians", feature: "feature_leaders" },
           { label: "Bihar Parties", href: "/parties", feature: "feature_parties" },
         ],
       },

@@ -12,7 +12,7 @@ export const NAV_LINKS = [
   { label: "Punjab News", href: "/top-news" },
   { label: "Punjab Government", href: "/category/punjab-government" },
   { label: "Punjab Elections", href: "/elections" },
-  { label: "Punjab Leaders", href: "/key-political-figures", feature: "feature_leaders" },
+  { label: "Politicians", href: "/politicians", feature: "feature_leaders" },
   { label: "Punjab Parties", href: "/parties", key: "politics", feature: "feature_parties" },
   { label: "Punjab State", href: "/state", key: "states", feature: "feature_states" },
   { label: "Punjab Districts", href: "/district" },

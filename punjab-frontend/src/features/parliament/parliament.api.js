@@ -2,6 +2,7 @@ import { allTeasers, getPageProfiles } from "@/features/news/news.api";
 import { getKeyFigures, findFigureByName } from "@/features/politicians/politician.api";
 import { createJsonResource } from "@/lib/jsonResource";
 import { mediaUrl } from "@/lib/api";
+import { pageProfile } from "@/features/events/events.api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8012/api";
 const readParliamentResource = createJsonResource(`${API_BASE_URL}/parliament`, {
@@ -83,8 +84,7 @@ export async function getHouseInfo(houseKey) {
 
 export async function getElectionInfo() {
   const [profiles, houses, allPosts] = await Promise.all([getPageProfiles(), getHouses(), allTeasers()]);
-  const page = profiles?.elections;
-  if (!page || typeof page !== "object" || !page.description) return null;
+  const page = pageProfile("elections", profiles);
 
   const relatedNews = allPosts.filter((story) => String(story.category || story.tag || "").toLowerCase().includes("election"));
   const relatedSlugSet = new Set(relatedNews.map((story) => story.slug));

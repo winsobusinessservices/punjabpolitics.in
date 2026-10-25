@@ -8,7 +8,7 @@ import { getElectionInfo } from "@/features/parliament/parliament.api";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata = buildPageMetadata({
-  title: "Punjab Elections: ",
+  title: "Punjab Elections: Results, Parties & Election Commission",
   description: "The 2024 general election result, the ruling coalition versus the opposition, party-wise performance and the Election Commission's role in India's elections.",
   path: "/elections",
 });

@@ -495,7 +495,7 @@ export default async function Home() {
             </section>
 
 
-            {/* Key Political Figures */}
+            {/* Politicians */}
             <section className={sectionClass("key_figures")} style={{ order: homepageOrder("key_figures") }}>
               <SectionHeader title={sectionLabel("key_figures").title} viewAllHref={sectionLabel("key_figures").viewAllHref} />
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">

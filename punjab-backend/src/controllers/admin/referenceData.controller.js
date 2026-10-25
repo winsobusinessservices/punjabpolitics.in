@@ -170,6 +170,7 @@ async function listReferenceData(req, res) {
     elections: pageProfiles?.elections || null,
     events: widgets.political_calendar || [],
     rallies: widgets.political_rallys || [],
+    upcomingElections: widgets.upcoming_elections || [],
     vidhanSabhas: widgets.vidhan_sabhas || [],
     homeWidgets: widgets,
     pageProfiles,
@@ -224,7 +225,8 @@ async function updateParliament(req, res) {
   return res.json({ success: true, message: "Parliament data updated", parliament });
 }
 
-const SCHEDULE_WIDGETS = { events: "political_calendar", rallies: "political_rallys" };
+const SCHEDULE_WIDGETS = { events: "political_calendar", rallies: "political_rallys", upcomingElections: "upcoming_elections" };
+const SCHEDULE_LABELS = { events: "Events", rallies: "Rallies", upcomingElections: "Upcoming elections" };
 
 async function updateSchedule(req, res) {
   const widgetKey = SCHEDULE_WIDGETS[req.params.type];
@@ -241,7 +243,7 @@ async function updateSchedule(req, res) {
     return res.status(400).json({ success: false, message: "Date and title are required for every item" });
   }
   await HomeWidget.upsert(widgetKey, items, managedSiteId(req));
-  return res.json({ success: true, message: `${req.params.type === "events" ? "Events" : "Rallies"} updated`, items });
+  return res.json({ success: true, message: `${SCHEDULE_LABELS[req.params.type]} updated`, items });
 }
 
 async function updateVidhanSabhas(req, res) {
@@ -371,23 +373,48 @@ async function updateSiteHeader(req, res) {
   if (input.countdown?.enabled && (!targetAt || Number.isNaN(new Date(targetAt).getTime()))) {
     return res.status(400).json({ success: false, message: "Choose a valid countdown date and time" });
   }
-  const menuItems = Array.isArray(input.menuItems) ? input.menuItems.slice(0, 50).map((item) => ({
-    label: text(item?.label, 80),
-    href: text(item?.href, 500),
-    enabled: item?.enabled !== false,
-    ...(text(item?.feature, 100) ? { feature: text(item.feature, 100) } : {}),
-    ...(item?.requiresServices ? { requiresServices: true } : {}),
-  })) : [];
-  if (menuItems.some((item) => !item.label || !item.href || (!item.href.startsWith("/") && !/^https?:\/\//i.test(item.href)))) {
+  const validHref = (href) => href && (href.startsWith("/") || /^https?:\/\//i.test(href));
+  const menuItems = Array.isArray(input.menuItems) ? input.menuItems.slice(0, 50).map((item) => {
+    const children = Array.isArray(item?.children) ? item.children.slice(0, 20).map((child) => ({
+      label: text(child?.label, 80),
+      href: text(child?.href, 500),
+      enabled: child?.enabled !== false,
+    })) : [];
+    return {
+      label: text(item?.label, 80),
+      href: text(item?.href, 500),
+      enabled: item?.enabled !== false,
+      ...(text(item?.feature, 100) ? { feature: text(item.feature, 100) } : {}),
+      ...(item?.requiresServices ? { requiresServices: true } : {}),
+      ...(children.length ? { children } : {}),
+    };
+  }) : [];
+  if (menuItems.some((item) => !item.label || !validHref(item.href))) {
     return res.status(400).json({ success: false, message: "Every menu item needs a label and a destination beginning with / or http." });
+  }
+  if (menuItems.some((item) => (item.children || []).some((child) => !child.label || !validHref(child.href)))) {
+    return res.status(400).json({ success: false, message: "Every dropdown item needs a label and a destination beginning with / or http." });
   }
   if (new Set(menuItems.map((item) => item.href)).size !== menuItems.length) {
     return res.status(400).json({ success: false, message: "Header menu destinations must be unique." });
   }
+  // Items beside the logo: each appears once, on the left or the right.
+  const LOGO_ITEMS = ["rallies", "weather", "elections", "events"];
+  const seenLogoItems = new Set();
+  const logoSide = (side) => (Array.isArray(input.logoLayout?.[side]) ? input.logoLayout[side] : [])
+    .filter((key) => LOGO_ITEMS.includes(key) && !seenLogoItems.has(key) && seenLogoItems.add(key));
+  const logoLayout = { left: logoSide("left"), right: logoSide("right") };
+  for (const key of LOGO_ITEMS) if (!seenLogoItems.has(key)) logoLayout[["rallies", "weather"].includes(key) ? "left" : "right"].push(key);
+  const mobileDefaults = { rallies: true, weather: false, elections: false, events: false };
+  const showOnMobile = Object.fromEntries(LOGO_ITEMS.map((key) => [key, typeof input.showOnMobile?.[key] === "boolean" ? input.showOnMobile[key] : mobileDefaults[key]]));
   const header = {
+    // show* flags control desktop and tablet; showOnMobile controls phones.
     showUpcomingRallies: input.showUpcomingRallies !== false,
     showWeather: input.showWeather !== false,
     showUpcomingEvents: input.showUpcomingEvents !== false,
+    showUpcomingElections: input.showUpcomingElections !== false,
+    logoLayout,
+    showOnMobile,
     menuItems,
     countdown: {
       enabled: Boolean(input.countdown?.enabled),

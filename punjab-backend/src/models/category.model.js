@@ -5,7 +5,7 @@ const TABLE = "categories";
 const RESERVED_ROOT_SLUGS = [
   "about", "ad-choices", "advertise-with-us", "advertize-with-us", "api", "author", "blogs", "careers",
   "category", "cm", "connect-as-a-sponsor", "contact", "cookie-policy", "district", "editorial-team", "elections",
-  "ethics-code", "forgot-password", "former-prime-ministers", "investors", "key-political-figures", "login",
+  "ethics-code", "forgot-password", "former-prime-ministers", "investors", "key-political-figures", "politicians", "login",
   "loksabha", "more", "news", "parties", "policies", "political-calendar", "press-conferences",
   "privacy-policy", "rajyasabha", "rallies", "register", "reset-password", "search", "speeches", "state",
   "terms-of-service", "top-news", "trending", "vidhan-sabha", "vidhansabha", "videos",

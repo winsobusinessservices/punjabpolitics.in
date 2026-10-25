@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useIsClient } from "@/hooks/useIsClient";
-import { getManagedPages, getPoliticalCalendar, getPoliticalRallys, getSiteHeaderSettings, getSectionVisibility, getSiteNavigation } from "@/features/news/news.api";
+import { getManagedPages, getPoliticalCalendar, getPoliticalRallys, getUpcomingElections, getSiteHeaderSettings, getSectionVisibility, getSiteNavigation } from "@/features/news/news.api";
 import { getCategoryDefinitions } from "@/features/news/news.api";
 import SearchBox from "@/components/search/SearchBox";
 import MobileMenu from "./MobileMenu";
@@ -29,62 +29,40 @@ import { mediaUrl } from "@/lib/api";
 
 
 
-function UpcomingEvents() {
-  const [events, setEvents] = useState([]);
-
+// A short date + title list beside the logo (events, rallies, elections).
+// `className` decides where it shows, e.g. "hidden md:flex" or "flex md:hidden".
+function ScheduleList({ title, href, load, className }) {
+  const [items, setItems] = useState([]);
 
   useEffect(() => {
-    getPoliticalCalendar().then((data) => setEvents(data.slice(0, 2)));
-  }, []);
+    load().then((data) => setItems(data.slice(0, 2))).catch(() => {});
+  }, [load]);
 
-  if (!events.length) return null;
+  if (!items.length) return null;
 
   return (
-    <Link href="/political-calendar" className="hidden md:flex flex-col gap-2 items-start group">
+    <Link href={href} className={`${className} flex-col gap-2 items-start group`}>
       <span className="flex items-center gap-2 font-headline-md text-base text-primary group-hover:underline">
         <i className="fa-solid fa-calendar-days" />
-        Upcoming Events
+        {title}
       </span>
-      {events.map((event) => (
-        <div key={event.id} className="flex items-center gap-2 text-sm font-body-md text-on-surface-variant">
+      {items.map((item) => (
+        <div key={item.id} className="flex items-center gap-2 text-sm font-body-md text-on-surface-variant">
           <span className="font-label-md text-xs text-on-primary bg-primary px-2.5 py-1 rounded-sm flex-shrink-0">
-            {event.date}
+            {item.date}
           </span>
-          <span className="truncate max-w-[240px] group-hover:text-primary transition-colors">{event.title}</span>
+          <span className="truncate max-w-[240px] group-hover:text-primary transition-colors">{item.title}</span>
         </div>
       ))}
     </Link>
   );
 }
 
-function UpcomingRallies() {
-  const [events, setEvents] = useState([]);
+const UpcomingEvents = ({ className }) => <ScheduleList title="Upcoming Events" href="/political-calendar" load={getPoliticalCalendar} className={className} />;
+const UpcomingRallies = ({ className }) => <ScheduleList title="Upcoming Rallies" href="/political-rallies" load={getPoliticalRallys} className={className} />;
+const UpcomingElections = ({ className }) => <ScheduleList title="Upcoming Elections" href="/elections" load={getUpcomingElections} className={className} />;
 
-  useEffect(() => {
-    getPoliticalRallys().then((data) => setEvents(data.slice(0, 2)));
-  }, []);
-
-  if (!events.length) return null;
-
-  return (
-    <Link href="/political-rallies" className="hidden md:flex flex-col gap-2 items-start group">
-      <span className="flex items-center gap-2 font-headline-md text-base text-primary group-hover:underline">
-        <i className="fa-solid fa-calendar-days" />
-        Upcoming Rallies
-      </span>
-      {events.map((event) => (
-        <div key={event.id} className="flex items-center gap-2 text-sm font-body-md text-on-surface-variant">
-          <span className="font-label-md text-xs text-on-primary bg-primary px-2.5 py-1 rounded-sm flex-shrink-0">
-            {event.date}
-          </span>
-          <span className="truncate max-w-[240px] group-hover:text-primary transition-colors">{event.title}</span>
-        </div>
-      ))}
-    </Link>
-  );
-}
-
-function HeaderCountdown({ countdown, showRalliesFallback, mobile = false }) {
+function HeaderCountdown({ countdown, fallback = null, mobile = false }) {
   const mounted = useIsClient();
   const [now, setNow] = useState(null);
   useEffect(() => {
@@ -98,7 +76,7 @@ function HeaderCountdown({ countdown, showRalliesFallback, mobile = false }) {
   }, []);
   if (!mounted || now === null || !countdown?.enabled || !countdown.targetAt) return null;
   const remaining = new Date(countdown.targetAt).getTime() - now;
-  if (!Number.isFinite(remaining) || remaining <= 0) return showRalliesFallback && !mobile ? <UpcomingRallies /> : null;
+  if (!Number.isFinite(remaining) || remaining <= 0) return fallback;
   const totalSeconds = Math.floor(remaining / 1000);
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
@@ -121,6 +99,82 @@ function HeaderCountdown({ countdown, showRalliesFallback, mobile = false }) {
 
 
 
+// Desktop menu item with a dropdown. The menu bar scrolls horizontally (which
+// would clip an absolutely positioned panel), so the panel is fixed-positioned
+// from the item's on-screen position.
+function NavDropdown({ link, className, children }) {
+  const [rect, setRect] = useState(null);
+  const closeTimer = useRef(null);
+  const anchorRef = useRef(null);
+  const open = () => {
+    window.clearTimeout(closeTimer.current);
+    setRect(anchorRef.current?.getBoundingClientRect() || null);
+  };
+  const close = () => {
+    window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => setRect(null), 120);
+  };
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+  useEffect(() => {
+    if (!rect) return undefined;
+    const hide = () => setRect(null);
+    window.addEventListener("scroll", hide, true);
+    window.addEventListener("resize", hide);
+    return () => { window.removeEventListener("scroll", hide, true); window.removeEventListener("resize", hide); };
+  }, [rect]);
+
+  return (
+    <div ref={anchorRef} className="flex h-full items-center" onMouseEnter={open} onMouseLeave={close} onFocus={open} onBlur={close} onKeyDown={(event) => { if (event.key === "Escape") setRect(null); }}>
+      <Link href={link.href} className={className} aria-haspopup="true" aria-expanded={Boolean(rect)}>
+        {children}
+        <i className="fa-solid fa-chevron-down ml-1.5 text-[9px]" aria-hidden="true" />
+      </Link>
+      {rect && (
+        <div role="menu" className="fixed z-[200] min-w-48 rounded-lg border border-outline-variant/30 bg-surface py-2 shadow-lg" style={{ top: rect.bottom, left: rect.left }}>
+          {link.children.map((child) => (
+            <Link key={child.href} role="menuitem" href={child.href} onClick={() => setRect(null)} className="block whitespace-nowrap px-4 py-2 font-label-md text-sm text-on-surface-variant transition-colors hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary focus:outline-none">
+              {child.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const DEFAULT_HEADER_SETTINGS = {
+  logoLayout: { left: ["rallies", "weather"], right: ["elections", "events"] },
+  showOnMobile: { rallies: true, weather: false, elections: false, events: false },
+  showUpcomingRallies: true,
+  showWeather: true,
+  showUpcomingEvents: true,
+  showUpcomingElections: true,
+  menuItems: [],
+  countdown: { enabled: false },
+};
+
+const DESKTOP_ONLY = "hidden md:flex";
+const MOBILE_ONLY = "flex md:hidden";
+
+// One item beside the logo, for desktop (mobile=false) or phones (mobile=true).
+// show* flags control desktop and tablet; showOnMobile controls phones.
+function LogoSideItem({ id, settings, featureVisibility, mobile }) {
+  const className = mobile ? MOBILE_ONLY : DESKTOP_ONLY;
+  const ralliesEnabled = featureVisibility.political_rallys !== false;
+  if (id === "rallies") {
+    const showRallies = (mobile ? settings.showOnMobile?.rallies : settings.showUpcomingRallies !== false) && ralliesEnabled;
+    const rallies = showRallies ? <UpcomingRallies className={className} /> : null;
+    // The countdown takes the rallies slot; on phones it follows the rallies mobile switch.
+    if (settings.countdown?.enabled && (!mobile || settings.showOnMobile?.rallies)) return <HeaderCountdown countdown={settings.countdown} fallback={rallies} mobile={mobile} />;
+    return rallies;
+  }
+  if (mobile ? !settings.showOnMobile?.[id] : settings[{ weather: "showWeather", events: "showUpcomingEvents", elections: "showUpcomingElections" }[id]] === false) return null;
+  if (id === "weather") return <HeaderWeather className={className} />;
+  if (id === "events") return featureVisibility.political_calendar !== false ? <UpcomingEvents className={className} /> : null;
+  if (id === "elections") return <UpcomingElections className={className} />;
+  return null;
+}
+
 export default function Header({ showMasthead = true }) {
   const site = useSite();
   const router = useRouter();
@@ -132,7 +186,7 @@ export default function Header({ showMasthead = true }) {
   const [anchorRect, setAnchorRect] = useState(null);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [headerSettings, setHeaderSettings] = useState({ showUpcomingRallies: true, showWeather: true, showUpcomingEvents: true, menuItems: [], countdown: { enabled: false } });
+  const [headerSettings, setHeaderSettings] = useState(DEFAULT_HEADER_SETTINGS);
   const [featureVisibility, setFeatureVisibility] = useState({});
   const [managedPages, setManagedPages] = useState({});
   const [siteCategories, setSiteCategories] = useState([]);
@@ -140,7 +194,7 @@ export default function Header({ showMasthead = true }) {
   const profileButtonRef = useRef(null);
 
   useEffect(() => {
-    getSiteHeaderSettings().then((settings) => setHeaderSettings((current) => ({ ...current, ...settings, menuItems: Array.isArray(settings.menuItems) ? settings.menuItems : [], countdown: { ...current.countdown, ...(settings.countdown || {}) } }))).catch(() => {});
+    getSiteHeaderSettings().then((settings) => setHeaderSettings((current) => ({ ...current, ...settings, showOnMobile: { ...current.showOnMobile, ...(settings.showOnMobile || {}) }, menuItems: Array.isArray(settings.menuItems) ? settings.menuItems : [], countdown: { ...current.countdown, ...(settings.countdown || {}) } }))).catch(() => {});
     getSectionVisibility().then(setFeatureVisibility).catch(() => {});
     getManagedPages().then(setManagedPages).catch(() => {});
     getCategoryDefinitions().then(setSiteCategories).catch(() => {});
@@ -171,10 +225,8 @@ export default function Header({ showMasthead = true }) {
     >
       <div className="w-full bg-surface border-b border-outline-variant/30 py-4">
         <div className="max-w-full mx-auto px-4 md:px-16 grid grid-cols-3 items-center">
-          <div className=" flex flex-col items-start">
-            {headerSettings.countdown?.enabled ? <HeaderCountdown countdown={headerSettings.countdown} showRalliesFallback={headerSettings.showUpcomingRallies && featureVisibility.political_rallys !== false} /> : headerSettings.showUpcomingRallies && featureVisibility.political_rallys !== false && <UpcomingRallies />}
-            {headerSettings.showWeather && <HeaderWeather />}
-
+          <div className="flex flex-col items-start gap-3">
+            {(headerSettings.logoLayout?.left || []).map((id) => <LogoSideItem key={id} id={id} settings={headerSettings} featureVisibility={featureVisibility} />)}
           </div>
 
           <div className="flex flex-col items-center gap-1.5 justify-self-center md:gap-2">
@@ -188,15 +240,14 @@ export default function Header({ showMasthead = true }) {
               </a>
             </p>
           </div>
-          <div className="justify-self-end">
-            {headerSettings.showUpcomingEvents && featureVisibility.political_calendar !== false && <UpcomingEvents />}
+          <div className="flex flex-col items-end gap-3 justify-self-end">
+            {(headerSettings.logoLayout?.right || []).map((id) => <LogoSideItem key={id} id={id} settings={headerSettings} featureVisibility={featureVisibility} />)}
           </div>
         </div>
-        {headerSettings.countdown?.enabled && (
-          <div className="px-4 pt-3 md:hidden">
-            <HeaderCountdown countdown={headerSettings.countdown} mobile />
-          </div>
-        )}
+        {/* Phones: the side columns are too narrow, so mobile-enabled items stack under the logo. */}
+        <div className="flex flex-col gap-3 px-4 empty:hidden md:hidden [&:not(:empty)]:pt-3">
+          {[...(headerSettings.logoLayout?.left || []), ...(headerSettings.logoLayout?.right || [])].map((id) => <LogoSideItem key={id} id={id} settings={headerSettings} featureVisibility={featureVisibility} mobile />)}
+        </div>
       </div>
     </header>}
 
@@ -216,21 +267,17 @@ export default function Header({ showMasthead = true }) {
 
           <div className="hidden min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap lg:flex">
             {visibleNavLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className={
-                    isActive
-                      ? "h-full flex items-center px-1 border-b-2 border-secondary text-primary font-bold py-3"
-                      : "h-full flex items-center font-label-md text-on-surface-variant hover:text-primary transition-all px-1 relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-0 hover:after:w-full after:bg-primary after:transition-all after:duration-300"
-                  }
-                >
-                  {link.href === "/premium" && <PremiumBadge variant="icon" className="mr-1.5 text-xs" />}
-                  {link.label.toUpperCase()}
-                </Link>
-              );
+              const isActive = pathname === link.href || link.children.some((child) => pathname === child.href);
+              const className = isActive
+                ? "h-full flex items-center px-1 border-b-2 border-secondary text-primary font-bold py-3"
+                : "h-full flex items-center font-label-md text-on-surface-variant hover:text-primary transition-all px-1 relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-0 hover:after:w-full after:bg-primary after:transition-all after:duration-300";
+              const content = <>
+                {link.href === "/premium" && <PremiumBadge variant="icon" className="mr-1.5 text-xs" />}
+                {link.label.toUpperCase()}
+              </>;
+              return link.children.length
+                ? <NavDropdown key={link.href} link={link} className={className}>{content}</NavDropdown>
+                : <Link key={link.href} href={link.href} className={className}>{content}</Link>;
             })}
 
           
@@ -241,7 +288,7 @@ export default function Header({ showMasthead = true }) {
                 {!isPremium && <Link
                 href="/subscription"
                 aria-label="Premium"
-                className="group relative hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-secondary transition-colors hover:bg-secondary hover:text-on-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:inline-flex"
+                className="group relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-secondary transition-colors hover:bg-secondary hover:text-on-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                >
                 <i className="fa-solid fa-crown text-sm" aria-hidden="true" />
                 <span
@@ -254,7 +301,7 @@ export default function Header({ showMasthead = true }) {
                <Link
                 href="/support"
                 aria-label="Support Us"
-                className="group relative hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:inline-flex"
+                className="group relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                >
                 <i className="fa-solid fa-hand-holding-heart text-sm" aria-hidden="true" />
                 {/* Name shown on hover or keyboard focus (an icon's alt attribute does nothing). */}

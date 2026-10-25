@@ -60,7 +60,7 @@ const weatherDescriptions = {
   99: "Thunderstorm",
 };
 
-export default function HeaderWeather() {
+export default function HeaderWeather({ className = "hidden md:flex" }) {
   const isClient = useIsClient();
   const [weather, setWeather] = useState(null);
   const [location, setLocation] = useState("Bengaluru");
@@ -201,7 +201,7 @@ export default function HeaderWeather() {
     : "Loading...";
 
   return (
-    <div className="hidden md:flex gap-1 pt-3 whitespace-nowrap">
+    <div className={`${className} gap-1 pt-3 whitespace-nowrap`}>
       <div className="mx-auto flex flex-nowrap gap-5 max-w-3xl items-center justify-between px-3 py-1">
 
         {/* LEFT: LOCATION + WEATHER */}

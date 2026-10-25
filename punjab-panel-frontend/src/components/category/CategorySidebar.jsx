@@ -51,7 +51,7 @@ export default async function CategorySidebar() {
       </div>
 
       <div className="pt-4 border-t border-outline-variant/30">
-        <WidgetHeading title="Top Leaders" action={<ViewAllLink href="/key-political-figures" />} />
+        <WidgetHeading title="Top Leaders" action={<ViewAllLink href="/politicians" />} />
         <ul className="space-y-2">
           {leaders.slice(0, 6).map((leader) => (
             <li key={leader.id} className="group cursor-pointer">

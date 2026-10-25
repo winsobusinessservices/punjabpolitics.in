@@ -40,6 +40,7 @@ const TABS = [
   ["vidhanSabhas", "Vidhan Sabha", "fa-gavel", PERMISSIONS.SITE_VIDHAN_SABHAS],
   ["events", "Upcoming Events", "fa-calendar-days", PERMISSIONS.SITE_SCHEDULES],
   ["rallies", "Upcoming Rallies", "fa-bullhorn", PERMISSIONS.SITE_SCHEDULES],
+  ["upcomingElections", "Upcoming Elections", "fa-check-to-slot", PERMISSIONS.SITE_SCHEDULES],
   ["homeWidgets", "Home Page Widgets", "fa-table-cells-large", PERMISSIONS.SITE_HOME_WIDGETS],
   ["websitePages", "Website Pages", "fa-file-lines", PERMISSIONS.SITE_PAGE_PROFILES],
   ["pageContent", "Speeches, Rallies & Elections", "fa-newspaper", PERMISSIONS.SITE_PAGE_PROFILES],
@@ -111,6 +112,7 @@ const EMPTY = {
   },
   events: { date: "", title: "" },
   rallies: { date: "", title: "" },
+  upcomingElections: { date: "", title: "" },
   vidhanSabhas: {
     state: "",
     name: "",
@@ -198,6 +200,10 @@ const FIELDS = {
   rallies: [
     ["date", "Date", "text", true],
     ["title", "Rally title", "text", true],
+  ],
+  upcomingElections: [
+    ["date", "Date", "text", true],
+    ["title", "Election", "text", true],
   ],
   vidhanSabhas: [
     ["state", "State", "text", true],
@@ -1638,6 +1644,7 @@ export default function ReferenceDataAdminClient({ initialTab = "" }) {
     parliament: DEFAULT_PARLIAMENT,
     events: [],
     rallies: [],
+    upcomingElections: [],
     vidhanSabhas: [],
   });
   const [tab, setTab] = useState(() => allowedTabs.some((item) => item.key === initialTab) ? initialTab : allowedTabs[0]?.key || "");
@@ -1761,7 +1768,7 @@ export default function ReferenceDataAdminClient({ initialTab = "" }) {
     setSaving(true);
     setError("");
     try {
-      if (["events", "rallies", "vidhanSabhas"].includes(tab)) {
+      if (["events", "rallies", "upcomingElections", "vidhanSabhas"].includes(tab)) {
         const current = data[tab] || [];
         const item = { ...form, id: editing?.id || `${Date.now()}` };
         const next = tab === "vidhanSabhas"
@@ -1796,7 +1803,7 @@ export default function ReferenceDataAdminClient({ initialTab = "" }) {
       const next = (data[tab] || []).filter((entry) => entry.id !== item.id);
       if (tab === "vidhanSabhas")
         await referenceAdminApi.updateVidhanSabhas(next);
-      else if (["events", "rallies"].includes(tab))
+      else if (["events", "rallies", "upcomingElections"].includes(tab))
         await referenceAdminApi.updateSchedule(tab, next);
       else await referenceAdminApi.remove(tab, item.id);
       await load();

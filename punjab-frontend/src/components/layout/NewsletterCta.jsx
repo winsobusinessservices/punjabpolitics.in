@@ -8,7 +8,7 @@ export default function NewsletterCta({ followUs = [] }) {
         Get daily briefings on Indian politics, elections, and policy delivered to your inbox.
       </p>
       <Link
-        href="/register"
+        href="/subscription"
         className="block text-center font-label-md bg-white text-primary px-4 py-2 rounded hover:bg-white/90 transition-colors mb-4"
       >
         SUBSCRIBE

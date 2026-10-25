@@ -803,7 +803,7 @@ pool.verifyConnection = async () => {
       ["top_stories", "Top Stories"], ["vidhan_sabha", "Vidhan Sabha"], ["editorial_opinion", "Editorial Opinion"],
       ["latest_blogs", "Latest Blogs"], ["regional_focus", "Regional Focus"],
       ["in_depth_analysis", "In-Depth Analysis"], ["multimedia_hub", "Multimedia Hub"],
-      ["key_figures", "Key Political Figures"], ["former_prime_ministers", "Former Prime Ministers"],
+      ["key_figures", "Politicians"], ["former_prime_ministers", "Former Prime Ministers"],
       ["voices_of_nation", "Voices of the Nation"], ["state_leadership", "State Leadership"],
       ["political_parties", "Indian Political Parties"], ["parliament", "Parliament"],
       ["digital_dispatches", "Digital Dispatches"], ["cm_corner", "Chief Minister's Corner"], ["pm_corner", "Prime Minister's Corner"],
@@ -828,6 +828,8 @@ pool.verifyConnection = async () => {
       `INSERT IGNORE INTO ui_sections (section_key, label) VALUES ${defaultSections.map(() => "(?, ?)").join(", ")}`,
       defaultSections.flat()
     );
+    // "Key Political Figures" was renamed to "Politicians".
+    await connection.query("UPDATE ui_sections SET label = 'Politicians' WHERE section_key = 'key_figures' AND label = 'Key Political Figures'");
     const websiteFeatures = [
       ["feature_videos", "Videos"], ["feature_blogs", "Blogs"], ["feature_policies", "Policies"],
       ["feature_parties", "Political Parties"], ["feature_leaders", "Political Leaders"],
@@ -1299,7 +1301,7 @@ pool.verifyConnection = async () => {
         top_stories: { title: "Top Stories", viewAllHref: "/top-news" }, editorial_opinion: { title: "Editorial Opinion" },
         latest_blogs: { title: "Latest Blogs", viewAllHref: "/blogs" }, regional_focus: { title: "Regional Focus" },
         in_depth_analysis: { title: "In-Depth Analysis" }, multimedia_hub: { title: "Multimedia Hub", viewAllHref: "/videos" },
-        key_figures: { title: "Key Political Figures", viewAllHref: "/key-political-figures" }, former_prime_ministers: { title: "Former Prime Ministers", viewAllHref: "/former-prime-ministers" },
+        key_figures: { title: "Politicians", viewAllHref: "/politicians" }, former_prime_ministers: { title: "Former Prime Ministers", viewAllHref: "/former-prime-ministers" },
         voices_of_nation: { title: "Voices of the Nation" }, state_leadership: { title: "State Leadership", viewAllHref: "/cm" },
         political_parties: { title: "Indian Political Parties", viewAllHref: "/parties" }, parliament: { title: "Parliament" },
         digital_dispatches: { title: "Digital Dispatches" }, video_highlights: { title: "Video Highlights" }, x_feed: { title: "X Feed" }, facebook_updates: { title: "Facebook Updates" },
@@ -1348,6 +1350,17 @@ pool.verifyConnection = async () => {
       `UPDATE home_widgets
        SET data = JSON_SET(data, '$.cm_corner', JSON_OBJECT('title', 'Chief Minister''s Corner', 'viewAllHref', '/cm'))
        WHERE widget_key = 'homepage_labels' AND JSON_EXTRACT(data, '$.cm_corner') IS NULL`
+    );
+    // /key-political-figures moved to /politicians; update saved links and menus.
+    await connection.query(
+      `UPDATE home_widgets SET data = REPLACE(CAST(data AS CHAR), '"/key-political-figures"', '"/politicians"')
+       WHERE CAST(data AS CHAR) LIKE '%"/key-political-figures"%'`
+    );
+    // Rename the old default heading only; custom headings are left alone.
+    await connection.query(
+      `UPDATE home_widgets
+       SET data = JSON_SET(data, '$.key_figures.title', 'Politicians')
+       WHERE widget_key = 'homepage_labels' AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.key_figures.title')) = 'Key Political Figures'`
     );
     const [siteHeaderRows] = await connection.query(
       `SELECT widgets.id, widgets.data, sites.services_enabled

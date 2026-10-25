@@ -7,10 +7,12 @@
 import { allTeasers, getSpeeches, getRallies, getPageProfiles } from "@/features/news/news.api";
 import { getKeyFigures, findFigureByName } from "@/features/politicians/politician.api";
 import { mediaUrl } from "@/lib/api";
+import { DEFAULT_PAGE_PROFILES } from "@/features/events/pageProfiles";
 
-function pageProfile(key, profiles) {
+// Saved panel content, or the same defaults the panel form starts with.
+export function pageProfile(key, profiles) {
   const saved = profiles?.[key];
-  return saved && typeof saved === "object" && saved.description ? saved : null;
+  return saved && typeof saved === "object" && saved.description ? saved : DEFAULT_PAGE_PROFILES[key];
 }
 
 export async function getSpeechesInfo() {

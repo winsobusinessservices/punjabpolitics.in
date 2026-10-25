@@ -37,6 +37,17 @@ function NavLinks({ pathname, onClose, links = [], isPremium = false }) {
                 {link.href === "/premium" && <PremiumBadge variant="icon" className="mr-1.5 text-xs" />}
                 {link.label}
               </Link>
+              {link.children?.length > 0 && (
+                <ul className="mt-2 space-y-2 border-l border-outline-variant/40 pl-4 text-sm">
+                  {link.children.map((child) => (
+                    <li key={child.href}>
+                      <Link href={child.href} onClick={onClose} className={pathname === child.href ? "text-primary font-bold underline" : "hover:text-primary transition-colors duration-300 hover:underline"}>
+                        {child.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           );
         })}

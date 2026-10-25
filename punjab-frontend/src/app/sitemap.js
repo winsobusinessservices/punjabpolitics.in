@@ -17,7 +17,7 @@ const STATIC_ROUTES = [
   { path: "/rallies", changeFrequency: "daily", priority: 0.8 },
   { path: "/elections", changeFrequency: "daily", priority: 0.9 },
   { path: "/political-calendar", changeFrequency: "daily", priority: 0.8 },
-  { path: "/key-political-figures", changeFrequency: "weekly", priority: 0.7 },
+  { path: "/politicians", changeFrequency: "weekly", priority: 0.7 },
   { path: "/cm", changeFrequency: "weekly", priority: 0.7 },
   { path: "/parties", changeFrequency: "weekly", priority: 0.7 },
   { path: "/state", changeFrequency: "weekly", priority: 0.7 },

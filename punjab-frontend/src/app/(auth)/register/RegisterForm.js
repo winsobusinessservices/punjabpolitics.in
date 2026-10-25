@@ -23,6 +23,8 @@ export default function RegisterForm() {
     confirmPassword: "",
   });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  // The Google section has its own consent checkbox, separate from the email form's.
+  const [agreedForGoogle, setAgreedForGoogle] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -157,7 +159,7 @@ export default function RegisterForm() {
   const handleGoogleCredential = useCallback(async (credential) => {
     setError("");
     setSuccess("");
-    if (!agreedToTerms) {
+    if (!agreedForGoogle) {
       setError("Please accept the privacy policy before continuing with Google.");
       return;
     }
@@ -177,7 +179,20 @@ export default function RegisterForm() {
     } finally {
       setLoading(false);
     }
-  }, [agreedToTerms, refreshUser, router, registrationPolicies]);
+  }, [agreedForGoogle, refreshUser, router, registrationPolicies]);
+
+  const consentText = (
+    <span>
+      I have read and agree to the{" "}
+      {consentPolicies.map((policy, index) => (
+        <span key={policy.id}>
+          {index > 0 && (index === consentPolicies.length - 1 ? " and " : ", ")}
+          <Link href={policy.href} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary underline">{policy.title}</Link>
+        </span>
+      ))}
+      .
+    </span>
+  );
 
   return (
     <AuthShell
@@ -254,16 +269,7 @@ export default function RegisterForm() {
                   onChange={(event) => setAgreedToTerms(event.target.checked)}
                   className="mt-1 h-4 w-4 shrink-0 accent-primary"
                 />
-                <span>
-                  I have read and agree to the{" "}
-                  {consentPolicies.map((policy, index) => (
-                    <span key={policy.id}>
-                      {index > 0 && (index === consentPolicies.length - 1 ? " and " : ", ")}
-                      <Link href={policy.href} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary underline">{policy.title}</Link>
-                    </span>
-                  ))}
-                  .
-                </span>
+                {consentText}
               </label>
             </div>
           </>
@@ -339,10 +345,20 @@ export default function RegisterForm() {
         {step === "details" && (
           <section aria-labelledby="google-signup-title" className="mt-7 border-t border-outline-variant/30 pt-6">
             <h2 id="google-signup-title" className="font-headline-md text-lg text-on-surface">Or continue with Google</h2>
+            {/* Not "required": it shares the <form> with email sign-up and must not block that submit. */}
+            <label className="mt-4 flex items-start gap-3 text-sm leading-6 text-on-surface-variant">
+              <input
+                type="checkbox"
+                checked={agreedForGoogle}
+                onChange={(event) => setAgreedForGoogle(event.target.checked)}
+                className="mt-1 h-4 w-4 shrink-0 accent-primary"
+              />
+              {consentText}
+            </label>
             <div className="mt-4">
               <GoogleAuthButton
                 intent="register"
-                disabled={loading || !agreedToTerms}
+                disabled={loading || !agreedForGoogle}
                 onCredential={handleGoogleCredential}
                 onError={setError}
               />

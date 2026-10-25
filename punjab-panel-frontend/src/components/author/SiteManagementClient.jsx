@@ -1,16 +1,47 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { mediaUrl, siteManagementApi, uploadApi } from "@/lib/api";
 import { useAdminSite } from "@/context/AdminSiteContext";
 
 const DEFAULT_HEADER = {
+  logoLayout: { left: ["rallies", "weather"], right: ["elections", "events"] },
+  // show* flags control desktop and tablet; showOnMobile controls phones
+  // (the rallies slot carries the election countdown).
+  showOnMobile: { rallies: true, weather: false, elections: false, events: false },
   showUpcomingRallies: true,
   showWeather: true,
   showUpcomingEvents: true,
+  showUpcomingElections: true,
   menuItems: [],
   countdown: { enabled: false, title: "Election Results", targetAt: "", link: "/elections", buttonLabel: "View results" },
 };
+
+const LOGO_ITEMS = {
+  rallies: { label: "Upcoming rallies / countdown", flag: "showUpcomingRallies" },
+  weather: { label: "Weather", flag: "showWeather" },
+  elections: { label: "Upcoming elections", flag: "showUpcomingElections", description: "Add elections in Site Data → Upcoming Elections." },
+  events: { label: "Upcoming events", flag: "showUpcomingEvents" },
+};
+
+function normalizeLogoLayout(layout) {
+  const seen = new Set();
+  const side = (key) => (Array.isArray(layout?.[key]) ? layout[key] : []).filter((id) => LOGO_ITEMS[id] && !seen.has(id) && seen.add(id));
+  const next = { left: side("left"), right: side("right") };
+  for (const id of Object.keys(LOGO_ITEMS)) if (!seen.has(id)) next[DEFAULT_HEADER.logoLayout.left.includes(id) ? "left" : "right"].push(id);
+  return next;
+}
+
+function headerFromWidget(saved = {}) {
+  return {
+    ...DEFAULT_HEADER,
+    ...saved,
+    logoLayout: normalizeLogoLayout(saved.logoLayout),
+    showOnMobile: { ...DEFAULT_HEADER.showOnMobile, ...(saved.showOnMobile || {}) },
+    menuItems: Array.isArray(saved.menuItems) ? saved.menuItems : [],
+    countdown: { ...DEFAULT_HEADER.countdown, ...(saved.countdown || {}) },
+  };
+}
 
 const DEFAULT_HOME_VIDEO = { enabled: false, title: "Watch", videoUrl: "", posterUrl: "", placement: "above_footer" };
 
@@ -19,7 +50,7 @@ const inputClass = "mt-1.5 w-full rounded-md border border-outline-variant/30 bg
 const HOMEPAGE_SECTION_TYPES = [
   ["top_news", "Top News", "/top-news"],
   ["latest_news", "Latest News", "/top-news"],
-  ["leaders", "Political Leaders", "/key-political-figures"],
+  ["leaders", "Political Leaders", "/politicians"],
   ["services", "Services", "/services"],
   ["blogs", "Blogs", "/blogs"],
   ["videos", "Videos", "/videos"],
@@ -35,7 +66,7 @@ const BUILTIN_HOMEPAGE_SECTIONS = [
   ["in_depth_analysis", "In-Depth Analysis"],
   ["multimedia_hub", "Multimedia Hub"],
   ["main_ad", "Homepage Advertisement"],
-  ["key_figures", "Key Political Figures"],
+  ["key_figures", "Politicians"],
   ["former_prime_ministers", "Former Prime Ministers"],
   ["voices_of_nation", "Voices of the Nation"],
   ["state_leadership", "State Leadership"],
@@ -127,6 +158,12 @@ export default function SiteManagementClient() {
   const [newMenuHref, setNewMenuHref] = useState("");
   const [menuError, setMenuError] = useState("");
   const [draggedMenuHref, setDraggedMenuHref] = useState("");
+  // Dropdown (sub-menu) editor: which menu item is open, and the new-item form.
+  const [dropdownOpenHref, setDropdownOpenHref] = useState("");
+  const [childLabel, setChildLabel] = useState("");
+  const [childHref, setChildHref] = useState("");
+  const [childError, setChildError] = useState("");
+  const [draggedLogoItem, setDraggedLogoItem] = useState("");
   const [homepageSections, setHomepageSections] = useState([]);
   const [labelDrafts, setLabelDrafts] = useState({});
   const [savingLabels, setSavingLabels] = useState(false);
@@ -140,12 +177,7 @@ export default function SiteManagementClient() {
   const load = useCallback(async () => {
     const result = await siteManagementApi.get(siteId);
     setData(result);
-    setHeader({
-      ...DEFAULT_HEADER,
-      ...(result.widgets?.site_header || {}),
-      menuItems: Array.isArray(result.widgets?.site_header?.menuItems) ? result.widgets.site_header.menuItems : [],
-      countdown: { ...DEFAULT_HEADER.countdown, ...(result.widgets?.site_header?.countdown || {}) },
-    });
+    setHeader(headerFromWidget(result.widgets?.site_header));
     setHomepageSections(normalizeHomepageSections(result.widgets?.homepage_sections));
     setHomeVideo({ ...DEFAULT_HOME_VIDEO, ...(result.widgets?.home_video || {}) });
     return result;
@@ -157,7 +189,7 @@ export default function SiteManagementClient() {
     siteManagementApi.get(siteId).then((result) => {
       if (!active) return;
       setData(result);
-      setHeader({ ...DEFAULT_HEADER, ...(result.widgets?.site_header || {}), menuItems: Array.isArray(result.widgets?.site_header?.menuItems) ? result.widgets.site_header.menuItems : [], countdown: { ...DEFAULT_HEADER.countdown, ...(result.widgets?.site_header?.countdown || {}) } });
+      setHeader(headerFromWidget(result.widgets?.site_header));
       setHomepageSections(normalizeHomepageSections(result.widgets?.homepage_sections));
     setHomeVideo({ ...DEFAULT_HOME_VIDEO, ...(result.widgets?.home_video || {}) });
     }).catch((err) => active && setError(err.message)).finally(() => active && setLoading(false));
@@ -171,7 +203,7 @@ export default function SiteManagementClient() {
     setMessage("");
     try {
       const result = await siteManagementApi.updateHeader(header, Number(siteId));
-      setHeader(result.header);
+      setHeader(headerFromWidget(result.header));
       setMessage("Header and countdown settings saved.");
     } catch (err) {
       setError(err.message);
@@ -201,9 +233,73 @@ export default function SiteManagementClient() {
     setMenuError("");
   };
 
+  const updateMenuItem = (parentHref, change) => setHeader((current) => ({
+    ...current,
+    menuItems: current.menuItems.map((entry) => entry.href === parentHref ? change(entry) : entry),
+  }));
+
+  const toggleDropdownEditor = (parentHref) => {
+    setDropdownOpenHref((current) => current === parentHref ? "" : parentHref);
+    setChildLabel("");
+    setChildHref("");
+    setChildError("");
+  };
+
+  const addDropdownItem = (parent) => {
+    const label = childLabel.trim();
+    const href = childHref.trim();
+    if (!label || !href) {
+      setChildError("Enter both the dropdown label and destination.");
+      return;
+    }
+    if (!href.startsWith("/") && !/^https?:\/\//i.test(href)) {
+      setChildError("Destination must begin with / or http.");
+      return;
+    }
+    if ((parent.children || []).some((child) => child.href === href)) {
+      setChildError("That destination is already in this dropdown.");
+      return;
+    }
+    if ((parent.children || []).length >= 20) {
+      setChildError("A dropdown can hold up to 20 items.");
+      return;
+    }
+    updateMenuItem(parent.href, (entry) => ({ ...entry, children: [...(entry.children || []), { label, href, enabled: true }] }));
+    setChildLabel("");
+    setChildHref("");
+    setChildError("");
+  };
+
+  const removeDropdownItem = (parentHref, childHrefToRemove) => updateMenuItem(parentHref, (entry) => {
+    const children = (entry.children || []).filter((child) => child.href !== childHrefToRemove);
+    const { children: _removed, ...rest } = entry;
+    return children.length ? { ...rest, children } : rest;
+  });
+
+  const moveDropdownItem = (parentHref, index, direction) => updateMenuItem(parentHref, (entry) => {
+    const children = [...(entry.children || [])];
+    const target = index + direction;
+    if (target < 0 || target >= children.length) return entry;
+    [children[index], children[target]] = [children[target], children[index]];
+    return { ...entry, children };
+  });
+
   const orderedHeaderMenuItems = header.menuItems || [];
+  const logoLayout = header.logoLayout || DEFAULT_HEADER.logoLayout;
+  const moveLogoItem = (id, side, targetId) => {
+    if (!LOGO_ITEMS[id] || id === targetId) return;
+    setHeader((current) => {
+      const layout = current.logoLayout || DEFAULT_HEADER.logoLayout;
+      const next = { left: layout.left.filter((key) => key !== id), right: layout.right.filter((key) => key !== id) };
+      const index = targetId ? next[side].indexOf(targetId) : next[side].length;
+      next[side].splice(index < 0 ? next[side].length : index, 0, id);
+      return { ...current, logoLayout: next };
+    });
+    setDraggedLogoItem("");
+  };
   const moveMenuItem = (sourceHref, targetHref) => {
     if (!sourceHref || !targetHref || sourceHref === targetHref) return;
+    if (!orderedHeaderMenuItems.some((item) => item.href === sourceHref) || !orderedHeaderMenuItems.some((item) => item.href === targetHref)) return;
     const order = orderedHeaderMenuItems.map((item) => item.href).filter((href) => href !== sourceHref);
     order.splice(order.indexOf(targetHref), 0, sourceHref);
     setHeader((current) => ({ ...current, menuItems: order.map((href) => current.menuItems.find((item) => item.href === href)).filter(Boolean) }));
@@ -340,16 +436,61 @@ export default function SiteManagementClient() {
       <form onSubmit={saveHeader} inert={saving} aria-busy={saving} className="rounded-xl border border-primary/25 bg-surface-container-low/60 p-4 sm:p-6">
         <h2 className="font-headline-lg text-xl text-primary">Header &amp; Menu</h2>
         <p className="mt-1 text-sm text-on-surface-variant">Control the content beside the logo and every main navigation item.</p>
-        <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-3">
-          <Toggle label="Upcoming rallies" description="Shown to the left of the logo when the countdown is off." checked={header.showUpcomingRallies} onChange={(value) => setHeader((current) => ({ ...current, showUpcomingRallies: value }))} />
-          <Toggle label="Weather" description="Weather beneath the left header content." checked={header.showWeather} onChange={(value) => setHeader((current) => ({ ...current, showWeather: value }))} />
-          <Toggle label="Upcoming events" description="Shown to the right of the logo." checked={header.showUpcomingEvents} onChange={(value) => setHeader((current) => ({ ...current, showUpcomingEvents: value }))} />
+        <p className="mt-3 text-xs text-on-surface-variant">Drag cards to reorder them or move them to the other side of the logo, or use the buttons. Each item can be shown on desktop and tablet, on mobile phones, or both. Save the header to apply changes.</p>
+        <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {["left", "right"].map((side) => (
+            <div key={side} onDragOver={(event) => { if (draggedLogoItem) event.preventDefault(); }} onDrop={(event) => { event.preventDefault(); moveLogoItem(draggedLogoItem, side); }} className="min-h-32 space-y-3 rounded-xl border border-dashed border-primary/35 p-3">
+              <h3 className="font-headline-md text-sm capitalize text-primary">{side} of logo</h3>
+              {logoLayout[side].map((id, index) => {
+                const item = LOGO_ITEMS[id];
+                return <div key={id} onDragOver={(event) => { if (draggedLogoItem) event.preventDefault(); }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); moveLogoItem(draggedLogoItem, side, id); }} className={`rounded-lg border border-outline-variant/30 bg-surface p-2 ${draggedLogoItem === id ? "opacity-50" : ""}`}>
+                  <div className="mb-2 flex items-center gap-2">
+                    <span draggable onDragStart={(event) => { event.dataTransfer.setData("text/plain", id); event.dataTransfer.effectAllowed = "move"; setDraggedLogoItem(id); }} onDragEnd={() => setDraggedLogoItem("")} className="cursor-grab p-2 text-primary" title={`Drag ${item.label}`}><i className="fa-solid fa-grip-vertical" /></span>
+                    <span className="min-w-0 flex-1 truncate font-label-md text-sm text-on-surface">{item.label}</span>
+                    <button type="button" disabled={index === 0} aria-label={`Move ${item.label} up`} onClick={() => moveLogoItem(id, side, logoLayout[side][index - 1])} className="rounded border px-2 py-1 text-xs disabled:opacity-30">↑</button>
+                    <button type="button" disabled={index === logoLayout[side].length - 1} aria-label={`Move ${item.label} down`} onClick={() => moveLogoItem(id, side, logoLayout[side][index + 2])} className="rounded border px-2 py-1 text-xs disabled:opacity-30">↓</button>
+                    <button type="button" onClick={() => moveLogoItem(id, side === "left" ? "right" : "left")} className="rounded border px-2 py-1 text-xs">Move {side === "left" ? "right" : "left"}</button>
+                  </div>
+                  {item.description && <p className="mb-2 px-2 text-xs text-on-surface-variant">{item.description}</p>}
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <Toggle label="Desktop & tablet" description={id === "rallies" ? "An enabled countdown always shows here." : undefined} checked={header[item.flag] !== false} onChange={(value) => setHeader((current) => ({ ...current, [item.flag]: value }))} />
+                    <Toggle label="Mobile" description={id === "rallies" ? "Countdown when enabled, otherwise rallies." : undefined} checked={Boolean(header.showOnMobile?.[id])} onChange={(value) => setHeader((current) => ({ ...current, showOnMobile: { ...DEFAULT_HEADER.showOnMobile, ...(current.showOnMobile || {}), [id]: value } }))} />
+                  </div>
+                </div>;
+              })}
+              {!logoLayout[side].length && <p className="py-4 text-xs text-on-surface-variant">Drop an item here.</p>}
+            </div>
+          ))}
         </div>
 
         <div className="mt-7"><h3 className="font-headline-md text-base text-primary">Header menu items</h3><p className="mt-1 text-xs text-on-surface-variant">Drag items using the handle to change their public menu order, and edit the box under each item to rename it. Every item uses the same show/hide control for {activeSite?.name || "this website"}.</p></div>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {orderedHeaderMenuItems.map((item) => {
-            return <div key={item.href} draggable onDragStart={() => setDraggedMenuHref(item.href)} onDragEnd={() => setDraggedMenuHref("")} onDragOver={(event) => event.preventDefault()} onDrop={() => moveMenuItem(draggedMenuHref, item.href)} className={`relative rounded-lg transition ${draggedMenuHref === item.href ? "opacity-50" : ""}`}><span className="absolute left-1 top-1/2 z-10 -translate-y-1/2 cursor-grab rounded p-2 text-on-surface-variant hover:bg-primary/10 hover:text-primary" title="Drag to reorder"><i className="fa-solid fa-grip-vertical" /></span><div className="[&>div]:pl-10"><Toggle label={item.label} description={item.href} checked={item.enabled !== false} onChange={(value) => setHeader((current) => ({ ...current, menuItems: current.menuItems.map((entry) => entry.href === item.href ? { ...entry, enabled: value } : entry) }))} /></div><div className="pl-10 pr-2 pb-1"><input aria-label={`Menu name for ${item.href}`} title="Rename this menu item" value={item.label} maxLength={80} onChange={(event) => setHeader((current) => ({ ...current, menuItems: current.menuItems.map((entry) => entry.href === item.href ? { ...entry, label: event.target.value } : entry) }))} className={`${inputClass} !mt-1 !py-1.5 text-xs`} placeholder="Menu name" /></div><button type="button" aria-label={`Remove ${item.label}`} onClick={() => setHeader((current) => ({ ...current, menuItems: current.menuItems.filter((entry) => entry.href !== item.href) }))} className="absolute right-14 top-1/2 -translate-y-1/2 rounded p-2 text-error hover:bg-error/10"><i className="fa-solid fa-trash-can" /></button></div>;
+            const dropdownCount = (item.children || []).length;
+            const dropdownOpen = dropdownOpenHref === item.href;
+            return <Fragment key={item.href}><div className="flex flex-col gap-1"><div draggable onDragStart={(event) => { event.dataTransfer.setData("text/plain", item.href); event.dataTransfer.effectAllowed = "move"; setDraggedMenuHref(item.href); }} onDragEnd={() => setDraggedMenuHref("")} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); moveMenuItem(draggedMenuHref, item.href); }} className={`relative rounded-lg transition ${draggedMenuHref === item.href ? "opacity-50" : ""}`}><span className="absolute left-1 top-1/2 z-10 -translate-y-1/2 cursor-grab rounded p-2 text-on-surface-variant hover:bg-primary/10 hover:text-primary" title="Drag to reorder"><i className="fa-solid fa-grip-vertical" /></span><div className="[&>div]:pl-10"><Toggle label={item.label} description={item.href} checked={item.enabled !== false} onChange={(value) => setHeader((current) => ({ ...current, menuItems: current.menuItems.map((entry) => entry.href === item.href ? { ...entry, enabled: value } : entry) }))} /></div><div className="pl-10 pr-2 pb-1"><input aria-label={`Menu name for ${item.href}`} title="Rename this menu item" value={item.label} maxLength={80} onChange={(event) => setHeader((current) => ({ ...current, menuItems: current.menuItems.map((entry) => entry.href === item.href ? { ...entry, label: event.target.value } : entry) }))} className={`${inputClass} !mt-1 !py-1.5 text-xs`} placeholder="Menu name" /></div><button type="button" aria-label={`Remove ${item.label}`} onClick={() => setHeader((current) => ({ ...current, menuItems: current.menuItems.filter((entry) => entry.href !== item.href) }))} className="absolute right-14 top-1/2 -translate-y-1/2 rounded p-2 text-error hover:bg-error/10"><i className="fa-solid fa-trash-can" /></button></div>
+              <button type="button" onClick={() => toggleDropdownEditor(item.href)} aria-expanded={dropdownOpen} className="flex items-center gap-2 self-start rounded px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10"><i className={`fa-solid ${dropdownOpen ? "fa-chevron-up" : "fa-chevron-down"} text-[10px]`} aria-hidden="true" />Dropdown items{dropdownCount ? ` (${dropdownCount})` : ""}</button>
+            </div>
+            {dropdownOpen && <div className="col-span-full rounded-xl border border-primary/25 bg-surface p-4">
+              <h4 className="font-label-md text-sm text-primary">Dropdown under &ldquo;{item.label}&rdquo;</h4>
+              <p className="mt-1 text-xs text-on-surface-variant">These links appear when visitors hover over (or tap the arrow next to) {item.label} in the header. Clicking {item.label} itself still opens {item.href}.</p>
+              {dropdownCount > 0 && <ul className="mt-3 divide-y divide-outline-variant/20 rounded-lg border border-outline-variant/30">
+                {item.children.map((child, index) => <li key={child.href} className="flex items-center gap-2 px-3 py-2 text-sm">
+                  <span className="min-w-0 flex-1"><span className="block truncate font-label-md text-on-surface">{child.label}</span><span className="block truncate text-xs text-on-surface-variant">{child.href}</span></span>
+                  <button type="button" disabled={index === 0} aria-label={`Move ${child.label} up`} onClick={() => moveDropdownItem(item.href, index, -1)} className="rounded border px-2 py-1 text-xs disabled:opacity-30">↑</button>
+                  <button type="button" disabled={index === dropdownCount - 1} aria-label={`Move ${child.label} down`} onClick={() => moveDropdownItem(item.href, index, 1)} className="rounded border px-2 py-1 text-xs disabled:opacity-30">↓</button>
+                  <button type="button" title="Remove dropdown item" aria-label={`Remove ${child.label}`} onClick={() => removeDropdownItem(item.href, child.href)} className="rounded p-2 text-error hover:bg-error/10"><i className="fa-solid fa-trash-can" /></button>
+                </li>)}
+              </ul>}
+              <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_auto] sm:items-end">
+                <label className="text-xs font-label-md text-on-surface-variant">Dropdown label<input className={inputClass} value={childLabel} placeholder="Parties" onChange={(event) => { setChildLabel(event.target.value); setChildError(""); }} /></label>
+                <label className="text-xs font-label-md text-on-surface-variant">Destination<input className={inputClass} value={childHref} placeholder="/parties" onChange={(event) => { setChildHref(event.target.value); setChildError(""); }} /></label>
+                <button type="button" onClick={() => addDropdownItem(item)} className="min-h-10 rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary"><i className="fa-solid fa-plus mr-1.5" />Add item</button>
+              </div>
+              {childError && <p className="mt-2 text-xs text-error" role="alert">{childError}</p>}
+              <p className="mt-3 text-xs text-on-surface-variant">Remember to save the header settings after changing the dropdown.</p>
+            </div>}
+            </Fragment>;
           })}
         </div>
 
@@ -362,7 +503,7 @@ export default function SiteManagementClient() {
         <div className="mt-7 rounded-xl border border-outline-variant/30 bg-surface p-4 sm:p-5">
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
             <div>
-              <Toggle label="Header countdown timer" description="When enabled, this replaces Upcoming Rallies beside the logo." checked={header.countdown.enabled} onChange={(value) => setHeader((current) => ({ ...current, countdown: { ...current.countdown, enabled: value } }))} />
+              <Toggle label="Header countdown timer" description="When enabled, this replaces Upcoming Rallies in its chosen header position." checked={header.countdown.enabled} onChange={(value) => setHeader((current) => ({ ...current, countdown: { ...current.countdown, enabled: value } }))} />
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="text-xs font-label-md text-on-surface-variant">Countdown title<input className={inputClass} value={header.countdown.title} onChange={(event) => setHeader((current) => ({ ...current, countdown: { ...current.countdown, title: event.target.value } }))} required={header.countdown.enabled} /></label>
             <label className="text-xs font-label-md text-on-surface-variant">Result/event date and time<input type="datetime-local" className={inputClass} value={dateTimeInputValue(header.countdown.targetAt)} onChange={(event) => setHeader((current) => ({ ...current, countdown: { ...current.countdown, targetAt: event.target.value ? new Date(event.target.value).toISOString() : "" } }))} required={header.countdown.enabled} /></label>

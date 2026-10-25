@@ -146,7 +146,7 @@ export default async function Footer() {
           <div className="bg-surface rounded-lg border border-outline-variant/20 p-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-6">
             <KeywordColumn title={footerConfig.coverageTitle} items={footerConfig.coverageLinks || []} />
             {visibility.political_parties !== false && visibility.feature_parties !== false && <KeywordColumn title="Political Parties" viewAllHref="/parties" items={partyLinks} />}
-            {visibility.key_figures !== false && visibility.feature_leaders !== false && <KeywordColumn title="Political Leaders" viewAllHref="/key-political-figures" items={leaderLinks} />}
+            {visibility.key_figures !== false && visibility.feature_leaders !== false && <KeywordColumn title="Politicians" viewAllHref="/politicians" items={leaderLinks} />}
             {visibility.state_leadership !== false && visibility.feature_states !== false && <KeywordColumn title="States" viewAllHref="/state" items={stateLinks} />}
             {visibility.popular_tags !== false && <KeywordColumn title="Popular Keywords" items={tagLinks} />}
           </div>

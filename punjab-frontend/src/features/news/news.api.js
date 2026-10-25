@@ -57,6 +57,7 @@ const EMPTY_HOME_DATA = {
     extra_keywords: [],
     political_calendar: [],
     political_rallys: [],
+    upcoming_elections: [],
     from_the_archives: {},
     fact_check: {},
     poll_of_the_day: { question: "No poll is available yet.", options: [] },
@@ -125,7 +126,7 @@ function normalizeStructuredWidget(key, value) {
     if (key === "rti_corner") {
       return { id: `${key}-${index + 1}`, title: parts[0] || "", date: parts[1] || "" };
     }
-    if (["political_calendar", "political_rallys"].includes(key)) {
+    if (["political_calendar", "political_rallys", "upcoming_elections"].includes(key)) {
       return { id: `${key}-${index + 1}`, date: parts[0] || "", title: parts[1] || "" };
     }
     if (key === "digital_pulse") return { id: `digital-pulse-${index + 1}`, tag: parts[0] || "Update", text: parts.slice(1).join(" | ") || raw, tagClass: "bg-primary text-on-primary" };
@@ -156,7 +157,7 @@ function normalizeHomeData(value) {
 
   const widgets = { ...EMPTY_HOME_DATA.widgets, ...rawWidgets };
   for (const key of HOME_WIDGET_LISTS) widgets[key] = asArray(rawWidgets[key]);
-  for (const key of ["digital_pulse", "election_results", "political_calendar", "political_rallys", "rti_corner", "voices_of_nation", "opinion_leaders", "legislative_tracker"]) {
+  for (const key of ["digital_pulse", "election_results", "political_calendar", "political_rallys", "upcoming_elections", "rti_corner", "voices_of_nation", "opinion_leaders", "legislative_tracker"]) {
     widgets[key] = normalizeStructuredWidget(key, rawWidgets[key]);
   }
   widgets.site_header = asObject(rawWidgets.site_header);
@@ -447,6 +448,10 @@ export async function getPoliticalCalendar() {
 export async function getPoliticalRallys() {
   const { widgets } = await getHomeData();
   return widgets.political_rallys;
+}
+export async function getUpcomingElections() {
+  const { widgets } = await getHomeData();
+  return widgets.upcoming_elections;
 }
 export async function getFromTheArchives() {
   const { widgets } = await getHomeData();

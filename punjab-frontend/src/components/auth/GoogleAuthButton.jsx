@@ -5,6 +5,9 @@ import Script from "next/script";
 import { authApi } from "@/lib/api";
 
 const STATIC_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+// Google renders its button at most 400px wide and 40px tall ("large" size).
+const GOOGLE_MAX_WIDTH = 400;
+const GOOGLE_BUTTON_HEIGHT = 40;
 
 export default function GoogleAuthButton({ intent, disabled = false, onCredential, onError }) {
   const containerRef = useRef(null);
@@ -46,6 +49,7 @@ export default function GoogleAuthButton({ intent, disabled = false, onCredentia
       window.__indianRajnitiGoogleInitialized = true;
     }
 
+    const buttonWidth = Math.min(availableWidth, GOOGLE_MAX_WIDTH);
     buttonRef.current.replaceChildren();
     window.google.accounts.id.renderButton(buttonRef.current, {
       type: "standard",
@@ -54,8 +58,15 @@ export default function GoogleAuthButton({ intent, disabled = false, onCredentia
       shape: "rectangular",
       text: intent === "register" ? "signup_with" : "signin_with",
       logo_alignment: "left",
-      width: Math.min(availableWidth, 400),
+      width: buttonWidth,
     });
+
+    // On forms wider than Google's limit, scale the button evenly so it spans
+    // the full width like the other form buttons (still clickable when scaled).
+    const scale = availableWidth / buttonWidth;
+    buttonRef.current.style.width = `${buttonWidth}px`;
+    buttonRef.current.style.transform = scale > 1 ? `scale(${scale})` : "";
+    containerRef.current.style.height = scale > 1 ? `${Math.ceil(GOOGLE_BUTTON_HEIGHT * scale)}px` : "";
   }, [clientId, intent, onCredential]);
 
   useEffect(() => {
@@ -112,7 +123,7 @@ export default function GoogleAuthButton({ intent, disabled = false, onCredentia
       >
         <div
           ref={buttonRef}
-          className={`w-full max-w-[400px] ${disabled ? "pointer-events-none opacity-60" : ""}`}
+          className={`w-full max-w-[400px] origin-top ${disabled ? "pointer-events-none opacity-60" : ""}`}
         />
       </div>
       {scriptError && (

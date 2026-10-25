@@ -16,7 +16,7 @@ const STAFF_ROLES = ["ADMIN", "SUBADMIN", "EDITOR", "AUTHOR"];
 
 const FIXED_PAGES = [
   ["Home", "/"], ["About us", "/about"], ["Contact us", "/contact"], ["Careers", "/careers"], ["Policies", "/policies"],
-  ["Political parties", "/parties"], ["Chief ministers", "/cm"], ["Key political figures", "/key-political-figures"],
+  ["Political parties", "/parties"], ["Chief ministers", "/cm"], ["Politicians", "/politicians"],
   ["Former prime ministers", "/former-prime-ministers"], ["States and union territories", "/state"], ["Districts", "/district"],
   ["Lok Sabha", "/loksabha"], ["Rajya Sabha", "/rajyasabha"], ["Elections", "/elections"], ["Speeches", "/speeches"],
   ["Rallies", "/rallies"], ["Press conferences", "/press-conferences"], ["Political calendar", "/political-calendar"],
